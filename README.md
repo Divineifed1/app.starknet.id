@@ -9,6 +9,7 @@ Enabling users to:
 - Make calls to the starknet id serverless API
 
 ## Prerequisite 🌴 
+These are thing you have installed
 You should install a browser extension for any of these wallets below: 
 - ArgentX (Recommended)
 - Metamask
@@ -35,7 +36,7 @@ git clone https://github.com/lfglabs-dev/app.starknet.id.git
 Second step, install the dependencies.
 
 ```bash
-npm install
+npm install or npm i
 # or
 yarn add
 ```
