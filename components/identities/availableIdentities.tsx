@@ -24,7 +24,6 @@ import IdentitiesSkeleton from "./skeletons/identitiesSkeleton";
 const AvailableIdentities = ({ tokenId }: { tokenId: string }) => {
   const router = useRouter();
   const { address } = useAccount();
-  //const tokenId: string = router.query.tokenId as string;
   const [identity, setIdentity] = useState<Identity>();
   const [isIdentityADomain, setIsIdentityADomain] = useState<
     boolean | undefined
@@ -159,8 +158,7 @@ const AvailableIdentities = ({ tokenId }: { tokenId: string }) => {
   }, [address, router.asPath]);
 
   const connectWallet = async (connector: Connector) => {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
+    
     await connectAsync({ connector });
     localStorage.setItem("SID-connectedWallet", connector.id);
     localStorage.setItem("SID-lastUsedConnector", connector.id);
@@ -203,7 +201,7 @@ const AvailableIdentities = ({ tokenId }: { tokenId: string }) => {
                         key={index}
                         onClick={() => router.push(`/identities/${domain.id}`)}
                       >
-                        {domain.domain ? domain.domain : domain.id}
+                          {domain.domain ? domain.domain : domain.id}
                       </button>
                     ))}
                   </div>

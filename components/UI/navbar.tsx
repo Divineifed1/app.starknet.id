@@ -188,9 +188,7 @@ const Navbar: FunctionComponent = () => {
               <Link href="/">
                 <li className={styles.menuItem}>Domains</li>
               </Link>
-              {/* <Link href="/jointhetribe">
-                <li className={styles.menuItem}>Join the tribe</li>
-              </Link> */}
+              
               <div
                 onClick={handleDesktopNav}
                 className={styles.menuBurger}

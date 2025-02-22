@@ -20,48 +20,49 @@ const UpdateProfilePic: FunctionComponent<UpdateProfilePicProps> = ({
   setPfpTxHash,
 }) => {
   const { address } = useAccount();
-  const { userNfts, isLoading } = useWhitelistedNFTs(address as string);
-  const [openModal, setOpenModal] = useState<boolean>(false);
+  const { userNfts, isLoading } = useWhitelistedNFTs(address || "");
+
+  const [modalOpen, setModalOpen] = useState(false);
   const [selectedPfp, setSelectedPfp] = useState<StarkscanNftProps | null>(
     null
   );
 
-  const selectPfp = (nft: StarkscanNftProps) => {
-    setOpenModal(true);
+  const handlePfpSelection = (nft: StarkscanNftProps) => {
     setSelectedPfp(nft);
+    setModalOpen(true);
   };
 
-  const goBack = (cancel: boolean) => {
-    setOpenModal(false);
+  const handleModalClose = (cancel: boolean) => {
+    setModalOpen(false);
     if (!cancel) {
       openTxModal();
       back();
     }
   };
 
-  const hasNoNfts = userNfts.length === 0;
-
   return (
     <>
       <div className={styles.container}>
-        <div className={` ${hasNoNfts ? styles.noNfts : styles.gallery}`}>
+        <div className={userNfts.length === 0 ? styles.noNfts : styles.gallery}>
           <PfpGallery
-            selectPfp={selectPfp}
+            selectPfp={handlePfpSelection}
             selectedPfp={selectedPfp}
             userNfts={userNfts}
             isLoading={isLoading}
             title="Our Suggestions"
           />
         </div>
-        {!hasNoNfts && (
+
+        {userNfts.length > 0 && (
           <div className={styles.gallery}>
             <SelectedCollections />
           </div>
         )}
       </div>
+
       <ModalProfilePic
-        isModalOpen={openModal}
-        closeModal={goBack}
+        isModalOpen={modalOpen}
+        closeModal={handleModalClose}
         nftData={selectedPfp as StarkscanNftProps}
         tokenId={tokenId}
         setPfpTxHash={setPfpTxHash}
