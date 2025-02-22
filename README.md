@@ -9,7 +9,7 @@ Enabling users to:
 - Make calls to the starknet id serverless API
 
 ## Prerequisite 🌴 
-These are thing tools you should have installed
+These are thing tools you should have installed 
 You should install a browser extension for any of these wallets below: 
 - ArgentX (Recommended)
 - Metamask
