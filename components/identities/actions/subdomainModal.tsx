@@ -1,4 +1,4 @@
-import React, { FunctionComponent, useEffect, useState } from "react";
+import React, { FunctionComponent, useEffect, useState, useCallback } from "react";
 import { useAccount, useSendTransaction } from "@starknet-react/core";
 import { useIsValid } from "../../../hooks/naming";
 import { numberToString } from "../../../utils/stringService";
@@ -25,67 +25,61 @@ const SubdomainModal: FunctionComponent<SubdomainModalProps> = ({
 }) => {
   const [targetTokenId, setTargetTokenId] = useState<number>(0);
   const [subdomain, setSubdomain] = useState<string>("");
-  const encodedSubdomain: string = utils
-    .encodeDomain(subdomain)[0]
-    .toString(10);
+  const encodedSubdomain: string = utils.encodeDomain(subdomain)[0].toString(10);
   const isDomainValid = useIsValid(subdomain);
   const [callData, setCallData] = useState<Call[]>([]);
   const { address } = useAccount();
   const { addTransaction } = useNotificationManager();
-  const { sendAsync: transfer_domain, data: transferDomainData } =
-    useSendTransaction({
-      calls: callData,
-    });
+  const { sendAsync: transfer_domain, data: transferDomainData } = useSendTransaction({
+    calls: callData,
+  });
   const [isTxSent, setIsTxSent] = useState(false);
   const [isSendingTx, setIsSendingTx] = useState(false);
 
-  function changeTokenId(value: number): void {
-    setTargetTokenId(value);
-  }
-
-  function changeSubdomain(value: string): void {
-    setSubdomain(value);
-  }
+  const changeTokenId = (value: number): void => setTargetTokenId(value);
+  const changeSubdomain = (value: string): void => setSubdomain(value);
 
   useEffect(() => {
-    const newTokenId: number = Math.floor(Math.random() * 1000000000000);
-
-    if (targetTokenId !== 0) {
-      setCallData([
-        {
-          contractAddress: process.env.NEXT_PUBLIC_NAMING_CONTRACT as string,
-          entrypoint: "transfer_domain",
-          calldata: [
-            numberToString(Number(callDataEncodedDomain[0]) + 1),
-            encodedSubdomain,
-            ...callDataEncodedDomain.slice(1),
-            numberToString(targetTokenId),
-          ],
-        },
-      ]);
-    } else {
-      setCallData([
-        {
-          contractAddress: process.env.NEXT_PUBLIC_IDENTITY_CONTRACT as string,
-          entrypoint: "mint",
-          calldata: [numberToString(newTokenId)],
-        },
-        {
-          contractAddress: process.env.NEXT_PUBLIC_NAMING_CONTRACT as string,
-          entrypoint: "transfer_domain",
-          calldata: [
-            numberToString(Number(callDataEncodedDomain[0]) + 1),
-            encodedSubdomain,
-            ...callDataEncodedDomain.slice(1),
-            numberToString(newTokenId),
-          ],
-        },
-      ]);
-    }
+    setCallData(() => {
+      if (targetTokenId !== 0) {
+        return [
+          {
+            contractAddress: process.env.NEXT_PUBLIC_NAMING_CONTRACT as string,
+            entrypoint: "transfer_domain",
+            calldata: [
+              numberToString(Number(callDataEncodedDomain[0]) + 1),
+              encodedSubdomain,
+              ...callDataEncodedDomain.slice(1),
+              numberToString(targetTokenId),
+            ],
+          },
+        ];
+      } else {
+        const newTokenId = Math.floor(Math.random() * 1000000000000);
+        return [
+          {
+            contractAddress: process.env.NEXT_PUBLIC_IDENTITY_CONTRACT as string,
+            entrypoint: "mint",
+            calldata: [numberToString(newTokenId)],
+          },
+          {
+            contractAddress: process.env.NEXT_PUBLIC_NAMING_CONTRACT as string,
+            entrypoint: "transfer_domain",
+            calldata: [
+              numberToString(Number(callDataEncodedDomain[0]) + 1),
+              encodedSubdomain,
+              ...callDataEncodedDomain.slice(1),
+              numberToString(newTokenId),
+            ],
+          },
+        ];
+      }
+    });
   }, [targetTokenId, encodedSubdomain, callDataEncodedDomain, address]);
 
   useEffect(() => {
     if (!transferDomainData?.transaction_hash) return;
+
     addTransaction({
       timestamp: Date.now(),
       subtext: `For ${domain}`,
@@ -96,51 +90,42 @@ const SubdomainModal: FunctionComponent<SubdomainModalProps> = ({
         status: "pending",
       },
     });
+
     setIsTxSent(true);
     setIsSendingTx(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [transferDomainData]);
+  }, [transferDomainData, addTransaction, domain]);
 
-  async function transferDomain(): Promise<void> {
+  const transferDomain = useCallback(async (): Promise<void> => {
     try {
       setIsSendingTx(true);
       await transfer_domain();
     } catch (error) {
-      setIsSendingTx(false);
       console.error("Failed to transfer domain:", error);
+      setIsSendingTx(false);
     }
-  }
+  }, [transfer_domain]);
 
   const modalContent = (
-    <>
-      <div className="bg-[#FCFFFE]">
-        <p className="mt-5 text-center text-[#8C8989]">
-          As you own {domain} you can create a subdomain of it using this form.
-          This subdomain won&apos;t have any expiry date but the owner of the
-          parent domain will always be able to redeem it.
-        </p>
-      </div>
-      <div className="mt-5 flex flex-col justify-center w-full bg-[#FCFFFE]">
+    <div className="bg-[#FCFFFE]">
+      <p className="mt-5 text-center text-[#8C8989]">
+        As you own {domain}, you can create a subdomain of it using this form.
+        This subdomain won&apos;t have any expiry date, but the owner of the parent domain
+        will always be able to redeem it.
+      </p>
+      <div className="mt-5 flex flex-col justify-center w-full">
         <AdvancedTextField
           fullWidth
-          label={
-            isDomainValid !== true
-              ? `"${isDomainValid}" is not a valid character`
-              : "Subdomain"
-          }
+          label={isDomainValid !== true ? `"${isDomainValid}" is not a valid character` : "Subdomain"}
           value={subdomain}
           onChange={(e) => changeSubdomain(e.target.value)}
           color="secondary"
           error={isDomainValid !== true}
         />
         <div className="mt-6">
-          <SelectIdentity
-            tokenId={targetTokenId}
-            changeTokenId={changeTokenId}
-          />
+          <SelectIdentity tokenId={targetTokenId} changeTokenId={changeTokenId} />
         </div>
       </div>
-    </>
+    </div>
   );
 
   return (
@@ -162,3 +147,170 @@ const SubdomainModal: FunctionComponent<SubdomainModalProps> = ({
 };
 
 export default SubdomainModal;
+
+
+
+// import React, { FunctionComponent, useEffect, useState } from "react";
+// import { useAccount, useSendTransaction } from "@starknet-react/core";
+// import { useIsValid } from "../../../hooks/naming";
+// import { numberToString } from "../../../utils/stringService";
+// import SelectIdentity from "../../domains/selectIdentity";
+// import { utils } from "starknetid.js";
+// import { Call } from "starknet";
+// import { useNotificationManager } from "../../../hooks/useNotificationManager";
+// import { NotificationType, TransactionType } from "../../../utils/constants";
+// import TransactionModal from "@/components/UI/transactionModal";
+// import AdvancedTextField from "@/components/UI/advancedTextField";
+
+// type SubdomainModalProps = {
+//   handleClose: () => void;
+//   isModalOpen: boolean;
+//   callDataEncodedDomain: string[];
+//   domain?: string;
+// };
+
+// const SubdomainModal: FunctionComponent<SubdomainModalProps> = ({
+//   handleClose,
+//   isModalOpen,
+//   callDataEncodedDomain,
+//   domain,
+// }) => {
+//   const [targetTokenId, setTargetTokenId] = useState<number>(0);
+//   const [subdomain, setSubdomain] = useState<string>("");
+//   const encodedSubdomain: string = utils
+//     .encodeDomain(subdomain)[0]
+//     .toString(10);
+//   const isDomainValid = useIsValid(subdomain);
+//   const [callData, setCallData] = useState<Call[]>([]);
+//   const { address } = useAccount();
+//   const { addTransaction } = useNotificationManager();
+//   const { sendAsync: transfer_domain, data: transferDomainData } =
+//     useSendTransaction({
+//       calls: callData,
+//     });
+//   const [isTxSent, setIsTxSent] = useState(false);
+//   const [isSendingTx, setIsSendingTx] = useState(false);
+
+//   function changeTokenId(value: number): void {
+//     setTargetTokenId(value);
+//   }
+
+//   function changeSubdomain(value: string): void {
+//     setSubdomain(value);
+//   }
+
+//   useEffect(() => {
+//     const newTokenId: number = Math.floor(Math.random() * 1000000000000);
+
+//     if (targetTokenId !== 0) {
+//       setCallData([
+//         {
+//           contractAddress: process.env.NEXT_PUBLIC_NAMING_CONTRACT as string,
+//           entrypoint: "transfer_domain",
+//           calldata: [
+//             numberToString(Number(callDataEncodedDomain[0]) + 1),
+//             encodedSubdomain,
+//             ...callDataEncodedDomain.slice(1),
+//             numberToString(targetTokenId),
+//           ],
+//         },
+//       ]);
+//     } else {
+//       setCallData([
+//         {
+//           contractAddress: process.env.NEXT_PUBLIC_IDENTITY_CONTRACT as string,
+//           entrypoint: "mint",
+//           calldata: [numberToString(newTokenId)],
+//         },
+//         {
+//           contractAddress: process.env.NEXT_PUBLIC_NAMING_CONTRACT as string,
+//           entrypoint: "transfer_domain",
+//           calldata: [
+//             numberToString(Number(callDataEncodedDomain[0]) + 1),
+//             encodedSubdomain,
+//             ...callDataEncodedDomain.slice(1),
+//             numberToString(newTokenId),
+//           ],
+//         },
+//       ]);
+//     }
+//   }, [targetTokenId, encodedSubdomain, callDataEncodedDomain, address]);
+
+//   useEffect(() => {
+//     if (!transferDomainData?.transaction_hash) return;
+//     addTransaction({
+//       timestamp: Date.now(),
+//       subtext: `For ${domain}`,
+//       type: NotificationType.TRANSACTION,
+//       data: {
+//         type: TransactionType.SUBDOMAIN_CREATION,
+//         hash: transferDomainData.transaction_hash,
+//         status: "pending",
+//       },
+//     });
+//     setIsTxSent(true);
+//     setIsSendingTx(false);
+//     // eslint-disable-next-line react-hooks/exhaustive-deps
+//   }, [transferDomainData]);
+
+//   async function transferDomain(): Promise<void> {
+//     try {
+//       setIsSendingTx(true);
+//       await transfer_domain();
+//     } catch (error) {
+//       setIsSendingTx(false);
+//       console.error("Failed to transfer domain:", error);
+//     }
+//   }
+
+//   const modalContent = (
+//     <>
+//       <div className="bg-[#FCFFFE]">
+//         <p className="mt-5 text-center text-[#8C8989]">
+//           As you own {domain} you can create a subdomain of it using this form.
+//           This subdomain won&apos;t have any expiry date but the owner of the
+//           parent domain will always be able to redeem it.
+//         </p>
+//       </div>
+//       <div className="mt-5 flex flex-col justify-center w-full bg-[#FCFFFE]">
+//         <AdvancedTextField
+//           fullWidth
+//           label={
+//             isDomainValid !== true
+//               ? `"${isDomainValid}" is not a valid character`
+//               : "Subdomain"
+//           }
+//           value={subdomain}
+//           onChange={(e) => changeSubdomain(e.target.value)}
+//           color="secondary"
+//           error={isDomainValid !== true}
+//         />
+//         <div className="mt-6">
+//           <SelectIdentity
+//             tokenId={targetTokenId}
+//             changeTokenId={changeTokenId}
+//           />
+//         </div>
+//       </div>
+//     </>
+//   );
+
+//   return (
+//     <TransactionModal
+//       title={`Create a subdomain of ${domain}`}
+//       modalContent={modalContent}
+//       handleClose={handleClose}
+//       isModalOpen={isModalOpen}
+//       isTxSent={isTxSent}
+//       isSendingTx={isSendingTx}
+//       setIsSendingTx={setIsSendingTx}
+//       setIsTxSent={setIsTxSent}
+//       sendTransaction={transferDomain}
+//       transactionHash={transferDomainData?.transaction_hash}
+//       isButtonDisabled={!subdomain || typeof isDomainValid === "string"}
+//       buttonCta="Create subdomain"
+//     />
+//   );
+// };
+
+// export default SubdomainModal;

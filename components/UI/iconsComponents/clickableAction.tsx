@@ -18,33 +18,22 @@ const ClickableAction: FunctionComponent<ClickableActionProps> = ({
   style = "secondary",
   width = "fixed",
 }) => {
-  return (
-    <div
-      className={` mx-auto -space-x-1 
-        ${
-          style === "secondary"
-            ? styles.clickableActionSecondary
-            : styles.clickableActionPrimary
-        }
-        ${width === "auto" ? styles.clickableActionAutoWidth : ""}`}
-      onClick={onClick}
-    >
-      <div
-        className={
-          ` ${style === "secondary"
-            ? styles.clickableIconSecondary
-            : styles.clickableIconPrimary}`
-        }
-      >
-        {icon}
-      </div>
+  const actionClass =
+    style === "secondary" ? styles.clickableActionSecondary : styles.clickableActionPrimary;
+  const widthClass = width === "auto" ? styles.clickableActionAutoWidth : "";
+  const iconClass =
+    style === "secondary" ? styles.clickableIconSecondary : styles.clickableIconPrimary;
 
+  return (
+    <div className={`${actionClass} ${widthClass} mx-auto`} onClick={onClick}>
+      <div className={iconClass}>{icon}</div>
       <div className="ml-2">
-        <h1 className={styles.clickableActionTitle}>{title}</h1>
-        <p className={styles.clickableActionDescription}>{description}</p>
+        {title && <h1 className={styles.clickableActionTitle}>{title}</h1>}
+        {description && <p className={styles.clickableActionDescription}>{description}</p>}
       </div>
     </div>
   );
 };
 
 export default ClickableAction;
+
